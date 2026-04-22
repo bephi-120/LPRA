@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { getAlbumDetails, getBestThumbnail } from '@/lib/ytmusic'
-import type { Supabase_Database } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +11,8 @@ export async function GET(
   { params }: { params: { browseId: string } }
 ) {
   const { browseId } = params
-  const supabase = createRouteHandlerClient<Supabase_Database>({ cookies })
+  // Sin genérico <Supabase_Database> — evita el error de TypeScript con upsert
+  const supabase = createRouteHandlerClient({ cookies })
 
   // 1. Intentar traer el álbum desde Supabase (ya cacheado)
   const { data: existingAlbum } = await supabase
@@ -70,7 +70,7 @@ export async function GET(
     }
   }
 
-  // 5. Devolver el álbum con las canciones ya formateado
+  // 5. Devolver el álbum formateado
   return NextResponse.json({
     album: {
       youtube_id: ytAlbum.browseId,
