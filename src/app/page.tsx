@@ -1,4 +1,5 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
@@ -6,46 +7,44 @@ import AlbumCard from '@/components/AlbumCard'
 import type { Album, UserAlbumRating } from '@/types'
 
 export default async function HomePage() {
-  const supabase = createServerClient()
+  // Sin genérico — evita el error "never" de TypeScript
+  const supabase = createServerComponentClient({ cookies })
 
-  // Verificar sesión (el middleware ya protege, pero por las dudas)
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/login')
 
-  // Traer el perfil del usuario
   const { data: profile } = await supabase
     .from('profiles')
     .select('username, display_name')
     .eq('id', session.user.id)
     .single()
 
-  // Traer los álbumes que el usuario ya calificó (con promedio)
-  const { data: userRatings } = await supabase
+  const { data: userRatingsRaw } = await supabase
     .from('user_album_ratings')
     .select('*')
     .eq('user_id', session.user.id)
-    .order('calculated_rating', { ascending: false })
 
-  // Traer los datos completos de esos álbumes
+  const userRatings = (userRatingsRaw ?? []) as UserAlbumRating[]
+
   let ratedAlbums: (Album & { calculated_rating: number | null; songs_rated: number })[] = []
 
-  if (userRatings && userRatings.length > 0) {
-    const albumIds = userRatings.map((r: UserAlbumRating) => r.album_youtube_id)
-    const { data: albums } = await supabase
+  if (userRatings.length > 0) {
+    const albumIds = userRatings.map(r => r.album_youtube_id)
+    const { data: albumsRaw } = await supabase
       .from('albums')
       .select('*')
       .in('youtube_id', albumIds)
 
-    if (albums) {
-      ratedAlbums = albums.map((album: Album) => {
-        const rating = userRatings.find((r: UserAlbumRating) => r.album_youtube_id === album.youtube_id)
-        return {
-          ...album,
-          calculated_rating: rating?.calculated_rating ?? null,
-          songs_rated: rating?.songs_rated ?? 0,
-        }
-      }).sort((a, b) => (b.calculated_rating ?? 0) - (a.calculated_rating ?? 0))
-    }
+    const albums = (albumsRaw ?? []) as Album[]
+
+    ratedAlbums = albums.map(album => {
+      const rating = userRatings.find(r => r.album_youtube_id === album.youtube_id)
+      return {
+        ...album,
+        calculated_rating: rating?.calculated_rating ?? null,
+        songs_rated: rating?.songs_rated ?? 0,
+      }
+    }).sort((a, b) => (b.calculated_rating ?? 0) - (a.calculated_rating ?? 0))
   }
 
   const displayName = profile?.display_name || profile?.username || session.user.email
@@ -56,7 +55,6 @@ export default async function HomePage() {
 
       <main className="max-w-5xl mx-auto px-4 py-10">
 
-        {/* Hero / Buscador */}
         <section className="text-center mb-12">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
             Hola, {displayName?.split('@')[0]} 👋
@@ -69,7 +67,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Álbumes calificados */}
         {ratedAlbums.length > 0 ? (
           <section>
             <h2 className="text-lg font-semibold text-gray-300 mb-4">
