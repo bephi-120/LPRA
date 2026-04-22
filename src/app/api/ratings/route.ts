@@ -7,7 +7,7 @@ import type { Supabase_Database, RatingInput } from '@/types'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  const supabase = createRouteHandlerClient<Supabase_Database>({ cookies })
+  const supabase = createRouteHandlerClient({ cookies })
 
   // Verificar que el usuario está autenticado
   const { data: { session } } = await supabase.auth.getSession()
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = createRouteHandlerClient<Supabase_Database>({ cookies })
+  const supabase = createRouteHandlerClient({ cookies })
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
