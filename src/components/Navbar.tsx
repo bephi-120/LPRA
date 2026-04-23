@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { Music2, LogOut, Search } from 'lucide-react'
+import { Music2, LogOut, Search, User } from 'lucide-react'
 
 type NavbarProps = {
   username?: string | null
@@ -22,7 +22,6 @@ export default function Navbar({ username }: NavbarProps) {
     <header className="sticky top-0 z-50 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-md">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
 
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
           <div className="w-8 h-8 bg-sky-600 rounded-lg flex items-center justify-center group-hover:bg-sky-500 transition-colors">
             <Music2 className="w-4 h-4 text-white" />
@@ -30,7 +29,6 @@ export default function Navbar({ username }: NavbarProps) {
           <span className="font-bold text-lg tracking-tight">LPRA</span>
         </Link>
 
-        {/* Nav links */}
         <nav className="hidden sm:flex items-center gap-1">
           <Link href="/" className="btn-ghost text-sm py-1.5 px-3 flex items-center gap-1.5">
             <Search className="w-3.5 h-3.5" />
@@ -38,13 +36,14 @@ export default function Navbar({ username }: NavbarProps) {
           </Link>
         </nav>
 
-        {/* User */}
-        <div className="flex items-center gap-3">
-          {username && (
-            <span className="text-gray-500 text-sm hidden sm:block">
-              {username}
-            </span>
-          )}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/profile"
+            className="btn-ghost text-sm py-1.5 px-3 flex items-center gap-1.5 text-gray-400"
+          >
+            <User className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{username || 'Perfil'}</span>
+          </Link>
           <button
             onClick={handleLogout}
             className="btn-ghost text-sm py-1.5 px-3 flex items-center gap-1.5 text-gray-400"
