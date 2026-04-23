@@ -1,14 +1,11 @@
 import YTMusic from 'ytmusic-api'
 import type { YTMusicSearchResult, YTMusicAlbum, YTMusicTrack } from '@/types'
 
-let ytmusicInstance: YTMusic | null = null
-
+// En serverless cada invocación es nueva, no usar singleton global
 async function getYTMusic(): Promise<YTMusic> {
-  if (!ytmusicInstance) {
-    ytmusicInstance = new YTMusic()
-    await ytmusicInstance.initialize()
-  }
-  return ytmusicInstance
+  const ytmusic = new YTMusic()
+  await ytmusic.initialize()
+  return ytmusic
 }
 
 export function getBestThumbnail(thumbnails: any[]): string | null {
@@ -21,16 +18,35 @@ export async function searchAlbums(query: string): Promise<YTMusicSearchResult[]
   const ytmusic = await getYTMusic()
   try {
     const results = await ytmusic.searchAlbums(query)
-    return results.map((result: any) => ({
-      type: result.albumType || 'ALBUM',
-      browseId: result.albumId || result.browseId || '',
-      title: result.name || result.title || '',
-      artist: result.artist?.name || result.artists?.[0]?.name || 'Artista desconocido',
-      year: result.year ? String(result.year) : null,
-      thumbnails: result.thumbnails || [],
+    return results.map((r: any) => ({
+      type: r.albumType || 'ALBUM',
+      browseId: r.albumId || r.browseId || '',
+      title: r.name || r.title || '',
+      artist: r.artist?.name || r.artists?.[0]?.name || 'Artista desconocido',
+      year: r.year ? String(r.year) : null,
+      thumbnails: r.thumbnails || [],
     })).filter((r: YTMusicSearchResult) => r.browseId)
   } catch (error) {
-    console.error('Error buscando álbumes en YTMusic:', error)
+    console.error('Error buscando álbumes:', error)
+    return []
+  }
+}
+
+// Busca canciones sueltas (para artistas que no tienen álbumes en YT Music)
+export async function searchSongs(query: string): Promise<YTMusicSearchResult[]> {
+  const ytmusic = await getYTMusic()
+  try {
+    const results = await ytmusic.searchSongs(query)
+    return results.map((r: any) => ({
+      type: 'SINGLE' as const,
+      browseId: r.videoId || '',
+      title: r.name || r.title || '',
+      artist: r.artist?.name || r.artists?.[0]?.name || 'Artista desconocido',
+      year: null,
+      thumbnails: r.thumbnails || [],
+    })).filter((r: YTMusicSearchResult) => r.browseId)
+  } catch (error) {
+    console.error('Error buscando canciones:', error)
     return []
   }
 }
@@ -41,7 +57,6 @@ export async function getAlbumDetails(browseId: string): Promise<YTMusicAlbum | 
     const album = await ytmusic.getAlbum(browseId) as any
     if (!album) return null
 
-    // ytmusic-api devuelve .songs (no .tracks)
     const rawTracks = album.songs || []
     const tracks: YTMusicTrack[] = rawTracks
       .map((track: any, index: number) => ({
